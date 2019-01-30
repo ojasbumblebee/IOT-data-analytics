@@ -2,8 +2,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 
-#os.chdir("/home/ojas/Documents/independent_study_harry_perros/chicago-complete.weekly.2018-12-17-to-2018-12-23")
-os.chdir("/home/ojas/Documents/independent_study_harry_perros/chicago-complete.daily.2018-12-03")
+os.chdir("../chicago-complete.daily.2018-12-03")
 def load_csv_data(filename):
     dataframe = pd.read_csv(filename)
     return dataframe
