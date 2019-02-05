@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import folium
 from folium.plugins import HeatMap
@@ -20,21 +19,60 @@ def load_csv_data(filename):
 
 entire_data = load_csv_data("data.csv")
 node_data = load_csv_data("nodes.csv")
-print(node_data.keys())
-# create a map
 
-#coordinates_frame = node_data[['lat', 'lon']]
+# Print node.csv column keys
+print(entire_data.keys())
+
+# create a map
 folium_map = folium.Map(location=[node_data.lat[1], node_data.lon[1]],
                             zoom_start=10)
 
-for each_row in node_data.itertuples():
-    # Put a circle marker at each node location
-    popup_text = " Street Address: {}<br> \n description: {}<br> "
-    popup_text = popup_text.format(each_row.address,
+
+
+# Plot Nodes on Map
+def plot_nodes(node_data):
+    for each_row in node_data.itertuples():
+        # Put a circle marker at each node location
+        popup_text = " Street Address: {}<br> \n description: {}<br> "
+        popup_text = popup_text.format(each_row.address,
                                    each_row.description)
 
-    folium.CircleMarker(location=[each_row.lat, each_row.lon],radius=5, fill=True, popup=popup_text).add_to(folium_map)
 
+        folium.CircleMarker(location=[each_row.lat, each_row.lon],radius=5, fill=True, popup=popup_text).add_to(folium_map)
+
+plot_nodes(node_data)
+
+
+def inner_join_on_data_node_frames(entire_data, node_data):
+    result = pd.merge(entire_data,
+                      node_data[['node_id', 'lat', 'lon']],
+                      on='node_id',
+                      how='inner')
+    return result
+
+combined_frame  = inner_join_on_data_node_frames(entire_data, node_data)
+print(combined_frame.keys())
+def plot_data_heatmap(combined_frame, sensor_name, parameter):
+
+    # Ensure you're handing it floats
+    #combined_frame['lat'] = combined_frame['lat'].astype(float)
+    #combined_frame['lon'] = combined_frame['lon'].astype(float)
+
+    # Filter the DF for rows, then columns, then remove NaNs
+    heat_df = combined_frame[combined_frame['sensor'] == sensor_name]  # Reducing data size so it runs faster
+    heat_df = heat_df[heat_df['parameter'] == parameter]  # Reducing data size so it runs faster
+    heat_df = heat_df[['lat', 'lon', 'value_hrf']]
+    heat_df = heat_df.dropna()
+
+    # List comprehension to make out list of lists
+    heat_data = list(zip(heat_df.lat.values, heat_df.lon.values, heat_df.value_hrf.values))
+    print(heat_data)
+    # Plot it on the map
+    HeatMap(heat_data).add_to(folium_map)
+
+sensor_name = "tmp112"
+parameter = "temperature"
+#plot_data_heatmap(combined_frame, sensor_name, parameter)
 
 # ------------------------------------------------------------------------------------------------
 # custom temporary-HTML renderer
