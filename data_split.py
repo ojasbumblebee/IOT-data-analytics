@@ -14,21 +14,10 @@ parser.add_argument("--path", required=True,
 args = parser.parse_args()
 print(args)
 
-os.chdir("../chicago-complete.daily.2018-12-03")
-
-path_name = os.path.split(os.getcwd())
-print(path_name)
-# Load data
 
 def load_csv_data(filename):
     dataframe = pd.read_csv(filename)
     return dataframe
-
-entire_data = load_csv_data("data.csv")
-node_data = load_csv_data("nodes.csv")
-
-# Print node.csv column keys
-print(entire_data.keys())
 
 def inner_join_on_data_node_frame(entire_data, node_data):
 
@@ -38,16 +27,7 @@ def inner_join_on_data_node_frame(entire_data, node_data):
                       how='inner')
     return result
 
-combined_data_frame = inner_join_on_data_node_frame(entire_data, node_data)
-print(combined_data_frame.keys())
 
-#Filter the combined data frame for the desired sensor values
-combined_data_frame = combined_data_frame.loc[combined_data_frame['sensor'] == args.sensor]
-combined_data_frame = combined_data_frame.loc[combined_data_frame['parameter'] == args.parameter]
-combined_data_frame = combined_data_frame.dropna(how="all")
-
-#filter data values for corrupt data
-sensor_data = load_csv_data("sensors.csv")
 def inner_join_on_data_sensor_frame(combined_data_frame, sensor_data):
 
     result = pd.merge(combined_data_frame,
@@ -56,20 +36,74 @@ def inner_join_on_data_sensor_frame(combined_data_frame, sensor_data):
                       how='inner')
     return result
 
-combined_data_frame = inner_join_on_data_sensor_frame(combined_data_frame, sensor_data)
-print(combined_data_frame.keys())
 
-combined_data_frame= combined_data_frame[(combined_data_frame['value_hrf'].astype(float)
-                                        >= combined_data_frame['hrf_minval'].astype(float)[0]) &
-                                        (combined_data_frame['value_hrf'].astype(float)
-                                         <= combined_data_frame['hrf_maxval'].astype(float)[0])]
+def filter_corrupt_entries(combined_data_frame):
+    # filter data values for corrupt data
+    combined_data_frame = combined_data_frame[(combined_data_frame['value_hrf'].astype(float)
+                                               >= combined_data_frame['hrf_minval'].astype(float)[0]) &
+                                              (combined_data_frame['value_hrf'].astype(float)
+                                               <= combined_data_frame['hrf_maxval'].astype(float)[0])]
+    return combined_data_frame
 
 
+def filter_data_for_sensor_and_parameter(combined_data_frame):
+    # Filter the combined data frame for the desired sensor values
+
+    print(combined_data_frame['sensor'].unique())
+    combined_data_frame = combined_data_frame.loc[combined_data_frame['sensor'] == args.sensor]
+    combined_data_frame = combined_data_frame.loc[combined_data_frame['parameter'] == args.parameter]
+    combined_data_frame = combined_data_frame.dropna(how="all")
+
+    return combined_data_frame
+
+def adapter(current_data_chunk, sensor_data, node_data):
+
+
+    #Call filtering on sensor and parameter
+    current_data_chunk = filter_data_for_sensor_and_parameter(current_data_chunk)
+
+
+    combined_data_frame = inner_join_on_data_node_frame(current_data_chunk, node_data)
+
+    combined_data_frame = inner_join_on_data_sensor_frame(combined_data_frame, sensor_data)
+
+    # Call filtering for sensor range and NaN values
+    combined_data_frame = filter_corrupt_entries(combined_data_frame)
+
+
+    return combined_data_frame
+
+
+"""Here starts refactoring"""
+os.chdir(args.path)
+
+path_name = os.path.split(os.getcwd())
+# Load data
+node_data = load_csv_data("nodes.csv")
+sensor_data = load_csv_data("sensors.csv")
+
+resultant_frame = []
+chunksize = 10 ** 6
+for current_data_chunk in pd.read_csv("data.csv", chunksize=chunksize):
+    print(current_data_chunk.keys())
+    resultant_frame.append(adapter(current_data_chunk, sensor_data, node_data))
+    break
+
+crash()
 # Paths to store the data
+
+combined_data_frame = pd.concat(resultant_frame)
+
+
 """daily path :/home/ojas/Documents/independent_study_harry_perros/data/daily"""
 """daily path :/home/ojas/Documents/independent_study_harry_perros/data/weekly"""
 """daily path :/home/ojas/Documents/independent_study_harry_perros/data/monthly"""
 """daily path :/home/ojas/Documents/independent_study_harry_perros/data/yearly"""
-os.chdir("/home/ojas/Documents/independent_study_harry_perros/data/weekly")
+os.chdir("/home/ojas/Documents/independent_study_harry_perros/data/denver_data")
 
 combined_data_frame.to_csv(args.sensor+"_"+args.parameter+"_"+path_name[1]+".csv")
+
+
+
+
+

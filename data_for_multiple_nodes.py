@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 
-os.chdir("../chicago-complete.daily.2018-12-03")
+os.chdir("../chicago-complete.weekly.2018-12-17-to-2018-12-23")
 
 
 def load_csv_data(filename):
@@ -13,23 +13,13 @@ def load_csv_data(filename):
 def display_time_series():
     pass
 
+chunksize = 10 ** 6
+for chunk in pd.read_csv("data.csv", chunksize=chunksize):
+    print(chunk.head())
 
-entire_data = load_csv_data("data.csv")
+
+#entire_data = load_csv_data("data.csv")
 node_data = load_csv_data("nodes.csv")
+#print(entire_data.head())
 
-entire_data.timestamp = pd.to_datetime(entire_data.timestamp)
-entire_data.set_index('timestamp', inplace=True)
-for i in range(5, 13):
 
-    some_node_data = entire_data.loc[entire_data['node_id'] == node_data["node_id"][i]]
-
-    try:
-        data_meta_sense_bmp180 = some_node_data.loc[some_node_data['sensor'] == "tmp112"]
-        temp_data_meta_sense_bmp180 = data_meta_sense_bmp180.loc[data_meta_sense_bmp180['parameter'] == "temperature"]
-        temp_data_meta_sense_bmp180 = temp_data_meta_sense_bmp180['value_hrf'].astype(float)
-        temp_data_meta_sense_bmp180.plot(y='value_hrf', label="tmp112_" + str(i), legend=True)
-    except:
-        pass
-
-plt.title("temperature data from different nodes ")
-plt.show()
